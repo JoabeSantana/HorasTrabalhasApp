@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -12,7 +14,8 @@ class App extends StatelessWidget {
         //colorScheme: const ColorScheme.dark(),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Calculador Horas Trabalhadas'),
+      home: const MyHomePage(title: 'Calculadora Horas Trabalhadas'),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -28,6 +31,38 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   List<Widget> rows = [];
+
+  List<TextEditingController> controllers = [];
+
+  String horasTrabalhadas = "00:00";
+
+  void calcularHoras() {
+    List<DateTime> horas = [];
+    List<Duration> diferencasHoras = [];
+    DateTime total = DateFormat("HH:mm").parse("00:00");
+
+    for (var i = 0; i < controllers.length; i++) {
+      if (i % 2 == 0) {
+        DateTime time = DateFormat("HH:mm")
+            .parse("${controllers[i].text}:${controllers[i + 1].text}");
+        horas.add(time);
+      }
+    }
+    for (var i = horas.length - 1; i >= 0; i--) {
+      if (i % 2 == 0) {
+        Duration diferenca = horas[i + 1].difference(horas[i]);
+        diferencasHoras.add(diferenca);
+      }
+    }
+
+    for (var dif in diferencasHoras) {
+      total = total.add(dif);
+    }
+
+    setState(() {
+      horasTrabalhadas = DateFormat("HH:mm").format(total);
+    });
+  }
 
   void addRow() {
     setState(() {
@@ -46,13 +81,26 @@ class _MyHomePageState extends State<MyHomePage> {
   Row getRow() {
     List<AcaoWidget> acoes = [];
 
-    acoes.add(const AcaoWidget(acao: "Entrada"));
-    acoes.add(const AcaoWidget(acao: "Saída"));
+    controllers.add(TextEditingController(text: "--"));
+    controllers.add(TextEditingController(text: "--"));
+    controllers.add(TextEditingController(text: "--"));
+    controllers.add(TextEditingController(text: "--"));
+
+    acoes.add(AcaoWidget(
+        acao: "Entrada",
+        controllerHoras: controllers[controllers.length - 4],
+        controllerMinutos: controllers[controllers.length - 3]));
+
+    acoes.add(AcaoWidget(
+        acao: "Saída",
+        controllerHoras: controllers[controllers.length - 2],
+        controllerMinutos: controllers[controllers.length - 1]));
 
     Row row = Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: acoes);
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: acoes,
+    );
 
     return row;
   }
@@ -67,7 +115,6 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Center(
         child: SizedBox(
           width: 400,
-          height: 400,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -103,18 +150,28 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ),
               ),
-              OutlinedButton(
-                onPressed: () {},
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(400, 50),
-                  backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(10),
+              Column(
+                children: [
+                  Text("Horas Trabalhadas"),
+                  Text(horasTrabalhadas),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: OutlinedButton(
+                  onPressed: calcularHoras,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(400, 50),
+                    backgroundColor:
+                        Theme.of(context).colorScheme.inversePrimary,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(
+                        Radius.circular(10),
+                      ),
                     ),
                   ),
+                  child: const Text("Calcular"),
                 ),
-                child: const Text("Calcular"),
               ),
             ],
           ),
@@ -125,9 +182,15 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 
 class AcaoWidget extends StatelessWidget {
-  const AcaoWidget({super.key, required this.acao});
+  const AcaoWidget(
+      {super.key,
+      required this.acao,
+      required this.controllerHoras,
+      required this.controllerMinutos});
 
   final String acao;
+  final TextEditingController controllerHoras;
+  final TextEditingController controllerMinutos;
 
   @override
   Widget build(BuildContext context) {
@@ -142,34 +205,47 @@ class AcaoWidget extends StatelessWidget {
               border: Border.all(),
               borderRadius: BorderRadius.circular(5),
             ),
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 SizedBox(
                   width: 22,
-                  child: TextField(
-                    textAlign: TextAlign.center,
-                    maxLength: 2,
-                    decoration: InputDecoration(
-                        border: InputBorder.none, counterText: ""),
-                  ),
+                  child: TextFieldHorasMinutos(controller: controllerHoras),
                 ),
-                Text(":"),
+                const Text(":"),
                 SizedBox(
                   width: 22,
-                  child: TextField(
-                    textAlign: TextAlign.center,
-                    maxLength: 2,
-                    decoration: InputDecoration(
-                        border: InputBorder.none, counterText: ""),
-                  ),
+                  child: TextFieldHorasMinutos(controller: controllerMinutos),
                 ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class TextFieldHorasMinutos extends StatelessWidget {
+  const TextFieldHorasMinutos({
+    super.key,
+    required this.controller,
+  });
+
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      textAlign: TextAlign.center,
+      maxLength: 2,
+      decoration:
+          const InputDecoration(border: InputBorder.none, counterText: ""),
+      inputFormatters: [
+        FilteringTextInputFormatter.digitsOnly,
+      ],
     );
   }
 }
