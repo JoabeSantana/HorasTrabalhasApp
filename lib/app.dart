@@ -36,20 +36,27 @@ class _MyHomePageState extends State<MyHomePage> {
 
   String horasTrabalhadas = "00:00";
 
+  bool isCampoValido(String valor) {
+    return valor.isNotEmpty && !valor.contains('--');
+  }
+
   void calcularHoras() {
     List<DateTime> horas = [];
     List<Duration> diferencasHoras = [];
     DateTime total = DateFormat("HH:mm").parse("00:00");
 
     for (var i = 0; i < controllers.length; i++) {
-      if (i % 2 == 0) {
+      if (i % 2 == 0 &&
+          isCampoValido(controllers[i].text) &&
+          isCampoValido(controllers[i + 1].text)) {
         DateTime time = DateFormat("HH:mm")
             .parse("${controllers[i].text}:${controllers[i + 1].text}");
         horas.add(time);
       }
     }
+
     for (var i = horas.length - 1; i >= 0; i--) {
-      if (i % 2 == 0) {
+      if (i % 2 == 0 && (i + 1) < horas.length) {
         Duration diferenca = horas[i + 1].difference(horas[i]);
         diferencasHoras.add(diferenca);
       }
@@ -152,7 +159,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               Column(
                 children: [
-                  Text("Horas Trabalhadas"),
+                  const Text("Horas Trabalhadas"),
                   Text(horasTrabalhadas),
                 ],
               ),
